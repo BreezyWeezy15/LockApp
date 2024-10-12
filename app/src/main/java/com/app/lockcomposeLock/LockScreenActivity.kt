@@ -1,0 +1,147 @@
+package com.app.lockcomposeLock
+
+
+import android.annotation.SuppressLint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
+import android.os.Bundle
+import android.util.Log
+import android.view.MotionEvent
+import android.view.View
+import android.widget.Button
+import android.widget.EditText
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
+
+
+class LockScreenActivity : AppCompatActivity() {
+
+    private lateinit var lockUi: LinearLayout
+    private lateinit var askPermissionBtn: Button
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_lock_screen)
+
+        lockUi = findViewById(R.id.lockUi)
+        askPermissionBtn = findViewById(R.id.askPermission)
+        askPermissionBtn.setOnClickListener {
+            if (lockUi.visibility == View.GONE) {
+                lockUi.visibility = View.VISIBLE
+                showPassCodeUi()
+            }
+        }
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private fun showPassCodeUi() {
+        val btn0 = findViewById<TextView>(R.id.btn0)
+        val btn1 = findViewById<TextView>(R.id.btn1)
+        val btn2 = findViewById<TextView>(R.id.btn2)
+        val btn3 = findViewById<TextView>(R.id.btn3)
+        val btn4 = findViewById<TextView>(R.id.btn4)
+        val btn5 = findViewById<TextView>(R.id.btn5)
+        val btn6 = findViewById<TextView>(R.id.btn6)
+        val btn7 = findViewById<TextView>(R.id.btn7)
+        val btn8 = findViewById<TextView>(R.id.btn8)
+        val btn9 = findViewById<TextView>(R.id.btn9)
+        val tick = findViewById<ImageView>(R.id.tick)
+        val edit = findViewById<EditText>(R.id.passCodeEdit)
+
+        val passcodeBuilder = StringBuilder()
+        val numberButtons = listOf(btn0, btn1, btn2, btn3, btn4, btn5, btn6, btn7, btn8, btn9)
+
+        tick.setOnClickListener {
+            val enteredPasscode = passcodeBuilder.toString()
+            val packageName = intent.getStringExtra("PACKAGE_NAME")
+
+            if (packageName != null) {
+                val correctPinCode = getPinCodeForApp(packageName)
+
+                if (enteredPasscode == correctPinCode) {
+                    edit.text.clear()
+                    removePackageFromFirebase(packageName) // Remove package from Firebase
+                    finishAffinity()
+                } else {
+                    Toast.makeText(this, "Passcode is incorrect", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+
+        numberButtons.forEach { button ->
+            button.setOnClickListener {
+                passcodeBuilder.append(button.text)
+                edit.setText(passcodeBuilder.toString())
+            }
+        }
+
+        addRemoveIcon(edit)
+        edit.setOnTouchListener { v, event ->
+            if (event.action == MotionEvent.ACTION_UP) {
+                val drawableEnd = edit.compoundDrawablesRelative[2]
+                if (drawableEnd != null && event.rawX >= edit.right - drawableEnd.bounds.width()) {
+                    if (passcodeBuilder.isNotEmpty()) {
+                        passcodeBuilder.deleteCharAt(passcodeBuilder.length - 1)
+                        edit.setText(passcodeBuilder.toString())
+                    }
+                    return@setOnTouchListener true
+                }
+            }
+            false
+        }
+    }
+
+    private fun addRemoveIcon(edit: EditText) {
+        val greenColor = ContextCompat.getColor(this, R.color.greenColor)
+        val colorFilter = PorterDuffColorFilter(greenColor, PorterDuff.Mode.SRC_IN)
+        edit.compoundDrawablesRelative[2]?.colorFilter = colorFilter
+    }
+
+    private fun getPinCodeForApp(packageName: String): String? {
+        val database = FirebaseDatabase.getInstance().reference.child("childApp")
+        var pinCode: String? = null
+
+        database.orderByChild("package_name").equalTo(packageName)
+            .addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    if (snapshot.exists()) {
+                        for (appSnapshot in snapshot.children) {
+                            pinCode = appSnapshot.child("pin_code").getValue(String::class.java)
+                        }
+                    }
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    Log.e("FirebaseError", "Error fetching data: ${error.message}")
+                }
+            })
+
+        return pinCode
+    }
+
+    private fun removePackageFromFirebase(packageName: String) {
+        val database = FirebaseDatabase.getInstance().reference.child("childApp")
+        val query = database.orderByChild("package_name").equalTo(packageName)
+
+        query.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                for (appSnapshot in snapshot.children) {
+                    appSnapshot.ref.removeValue() // Remove the package from Firebase
+                    Log.d("Firebase", "Package removed: $packageName")
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Log.e("FirebaseError", "Error removing package: ${error.message}")
+            }
+        })
+    }
+}
