@@ -58,9 +58,7 @@ class MainActivity : ComponentActivity() {
                 NavHost(navController = navController, startDestination = "welcome") {
                     composable("welcome") { WelcomeScreen(navController) }
                     composable("main") { MainScreen(navController) }
-                    composable("showAppList") {
-                        ShowAppList()
-                    }
+                    composable("showAppList") { ShowAppList() }
                 }
             }
         }
@@ -74,12 +72,15 @@ class MainActivity : ComponentActivity() {
         val hasNotificationPermission = remember { mutableStateOf(isNotificationPermissionGranted(context)) }
         val isAccessibilityServiceEnabled = remember { mutableStateOf(isAccessibilityServiceEnabled(context, RecentAppsAccessibilityService::class.java)) }
 
+        // Function to update permission status
         fun updatePermissionStatus() {
             hasUsageStatsPermission.value = hasUsageStatsPermission(context)
             hasOverlayPermission.value = hasOverlayPermission(context)
             hasNotificationPermission.value = isNotificationPermissionGranted(context)
             isAccessibilityServiceEnabled.value = isAccessibilityServiceEnabled(context, RecentAppsAccessibilityService::class.java)
         }
+
+        // Launchers for requesting permissions
         val requestOverlayPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             updatePermissionStatus()
         }
@@ -93,10 +94,11 @@ class MainActivity : ComponentActivity() {
             updatePermissionStatus()
         }
 
-
+        // Function to check if all permissions are granted
         fun hasAllPermissions(): Boolean {
             return hasUsageStatsPermission.value && hasOverlayPermission.value && hasNotificationPermission.value && isAccessibilityServiceEnabled.value
         }
+
         Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
             // Display permission rows
             PermissionRow(
@@ -130,11 +132,12 @@ class MainActivity : ComponentActivity() {
                 label = "Accessibility Permission",
                 isGranted = isAccessibilityServiceEnabled.value,
                 onClick = {
-                    val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                    requestAccessibilityPermissionLauncher.launch(intent)
+                    if (!isAccessibilityServiceEnabled.value) { // Only prompt if the service is not already enabled
+                        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                        requestAccessibilityPermissionLauncher.launch(intent)
+                    }
                 }
             )
-
 
             Spacer(modifier = Modifier.weight(1f))
 
@@ -158,12 +161,9 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                         .size(48.dp) // Adjust size as needed
-
                 )
             }
         }
-
-
     }
 
     @Composable
@@ -186,14 +186,20 @@ class MainActivity : ComponentActivity() {
             )
         }
     }
+
+    // Helper function to check if usage stats permission is granted
     private fun hasUsageStatsPermission(context: Context): Boolean {
         val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
         val mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), context.packageName)
         return mode == AppOpsManager.MODE_ALLOWED
     }
+
+    // Helper function to check if overlay permission is granted
     private fun hasOverlayPermission(context: Context): Boolean {
         return Settings.canDrawOverlays(context)
     }
+
+    // Helper function to check if notification permission is granted
     private fun isNotificationPermissionGranted(context: Context): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
@@ -201,6 +207,8 @@ class MainActivity : ComponentActivity() {
             true
         }
     }
+
+    // Helper function to check if the Accessibility Service is enabled
     private fun isAccessibilityServiceEnabled(context: Context, service: Class<out AccessibilityService>): Boolean {
         val enabledServices = Settings.Secure.getString(
             context.contentResolver,
@@ -214,5 +222,5 @@ class MainActivity : ComponentActivity() {
         val componentNameString = ComponentName(context, service).flattenToString()
         return colonSplitter.iterator().asSequence().any { it.equals(componentNameString, ignoreCase = true) }
     }
-
 }
+

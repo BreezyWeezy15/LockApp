@@ -1,3 +1,4 @@
+import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Intent
 import android.content.res.Resources
@@ -8,9 +9,11 @@ import android.util.Base64
 import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -23,8 +26,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -35,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -48,13 +56,15 @@ import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 
 
+@OptIn(ExperimentalMaterial3Api::class)
+@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun ShowAppList() {
     val context = LocalContext.current.applicationContext as Application
     val selectedApps = remember { mutableStateListOf<InstalledApps>() }
     val isLoading = remember { mutableStateOf(true) }
 
-
+    // Start AppLockService
     LaunchedEffect(Unit) {
         val serviceIntent = Intent(context, AppLockService::class.java)
         context.startService(serviceIntent)
@@ -69,17 +79,42 @@ fun ShowAppList() {
         }
     }
 
-    if (isLoading.value) {
-        // Show loading indicator
-        CircularProgressIndicator()
-    } else {
-        LazyColumn {
-            items(selectedApps) { app ->
-                AppListItem(
-                    app = app,
-                    interval = app.interval,
-                    pinCode = app.pinCode
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(text = "Lock App", color = Color.Black) // Text for the AppBar
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.LightGray // Set the background color to light gray
                 )
+            )
+        }
+    ) { innerPadding ->
+        // Apply the innerPadding modifier to ensure content is placed below the TopAppBar
+        if (isLoading.value) {
+            // Show loading indicator
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding), // Use padding to prevent overlap
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(
+                    color = Color.Gray
+                )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.padding(innerPadding) // Apply padding here
+            ) {
+                items(selectedApps) { app ->
+                    AppListItem(
+                        app = app,
+                        interval = app.interval,
+                        pinCode = app.pinCode
+                    )
+                }
             }
         }
     }
