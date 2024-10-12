@@ -12,11 +12,6 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
     <uses-permission android:name="android.permission.BIND_ACCESSIBILITY_SERVICE"
         tools:ignore="ProtectedPermissions" />
-    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
-        tools:ignore="QueryAllPackagesPermission" />
-    <permission
-        android:name="com.app.lockcomposeLock.BIND_COMMUNICATION_SERVICE"
-        android:protectionLevel="signature" />
 
     <application
         android:allowBackup="true"

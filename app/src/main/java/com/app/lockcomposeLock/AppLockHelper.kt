@@ -1,5 +1,6 @@
 package com.app.lockcomposeLock
 
+
 import android.util.Log
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
@@ -8,7 +9,7 @@ import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 
 object AppLockHelper {
-    // Firebase Database Reference
+
     private lateinit var database: DatabaseReference
     private val lockedApps = mutableMapOf<String, String>() // Map of packageName -> pinCode
 
@@ -40,12 +41,12 @@ object AppLockHelper {
         })
     }
 
-    // Check if the app should be locked
+
     fun shouldLockApp(packageName: String): Boolean {
         return lockedApps.containsKey(packageName)
     }
 
-    // Get the pin code for the locked app
+
     fun getPinCodeForApp(packageName: String): String? {
         return lockedApps[packageName]
     }

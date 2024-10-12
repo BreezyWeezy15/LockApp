@@ -64,13 +64,12 @@ fun ShowAppList() {
     val selectedApps = remember { mutableStateListOf<InstalledApps>() }
     val isLoading = remember { mutableStateOf(true) }
 
-    // Start AppLockService
+
     LaunchedEffect(Unit) {
         val serviceIntent = Intent(context, AppLockService::class.java)
         context.startService(serviceIntent)
     }
 
-    // Fetch apps from Firebase when the Composable is first launched
     LaunchedEffect(Unit) {
         fetchAppsFromFirebase { apps ->
             selectedApps.clear()
@@ -83,21 +82,19 @@ fun ShowAppList() {
         topBar = {
             TopAppBar(
                 title = {
-                    Text(text = "Lock App", color = Color.Black) // Text for the AppBar
+                    Text(text = "Lock App", color = Color.Black)
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.LightGray // Set the background color to light gray
+                    containerColor = Color.LightGray
                 )
             )
         }
     ) { innerPadding ->
-        // Apply the innerPadding modifier to ensure content is placed below the TopAppBar
         if (isLoading.value) {
-            // Show loading indicator
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding), // Use padding to prevent overlap
+                    .padding(innerPadding),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator(
@@ -106,7 +103,7 @@ fun ShowAppList() {
             }
         } else {
             LazyColumn(
-                modifier = Modifier.padding(innerPadding) // Apply padding here
+                modifier = Modifier.padding(innerPadding)
             ) {
                 items(selectedApps) { app ->
                     AppListItem(
@@ -127,7 +124,7 @@ fun AppListItem(app: InstalledApps, interval: String, pinCode: String) {
             .fillMaxWidth()
             .padding(vertical = 8.dp),
         elevation = CardDefaults.cardElevation(4.dp),
-        shape = RoundedCornerShape(12.dp) // Rounded card corners
+        shape = RoundedCornerShape(12.dp)
     ) {
         Column(
             modifier = Modifier
@@ -142,8 +139,8 @@ fun AppListItem(app: InstalledApps, interval: String, pinCode: String) {
                     contentDescription = app.name,
                     modifier = Modifier
                         .size(64.dp)
-                        .clip(CircleShape) // Make the icon circular
-                        .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape) // Add a border
+                        .clip(CircleShape)
+                        .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Text(
@@ -156,7 +153,7 @@ fun AppListItem(app: InstalledApps, interval: String, pinCode: String) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Interval and Pin Code Section
+
             Column(
                 modifier = Modifier.padding(start = 8.dp)
             ) {
@@ -199,7 +196,6 @@ private fun fetchAppsFromFirebase(onAppsFetched: (List<InstalledApps>) -> Unit) 
                 val interval = childSnapshot.child("interval").getValue(String::class.java) ?: ""
                 val pinCode = childSnapshot.child("pin_code").getValue(String::class.java) ?: ""
 
-                // Convert Base64 string to Bitmap
                 val iconBitmap = base64ToBitmap(base64Icon)
 
                 val installedApp = InstalledApps(
@@ -211,17 +207,16 @@ private fun fetchAppsFromFirebase(onAppsFetched: (List<InstalledApps>) -> Unit) 
                 )
                 updatedList.add(installedApp)
             }
-            onAppsFetched(updatedList) // Callback to update the UI
+            onAppsFetched(updatedList)
         }
 
         override fun onCancelled(databaseError: DatabaseError) {
             Log.e("FirebaseError", "Error fetching data: ${databaseError.message}")
-            // Optionally, handle the error or update the UI to show an error message
         }
     })
 }
 
-// Function to convert Base64 string to Bitmap
+
 fun base64ToBitmap(base64String: String): Drawable? {
     return try {
         val decodedBytes = Base64.decode(base64String, Base64.DEFAULT)

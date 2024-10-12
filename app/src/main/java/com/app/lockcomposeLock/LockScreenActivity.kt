@@ -22,13 +22,12 @@ class LockScreenActivity : AppCompatActivity() {
 
     private lateinit var lockUi: LinearLayout
     private lateinit var askPermissionBtn: Button
-    private var correctPinCode: String? = null // Store the correct PIN code
+    private var correctPinCode: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_lock_screen)
 
-        // Retrieve the correct PIN code from the intent
         correctPinCode = intent.getStringExtra("PIN_CODE")
 
         lockUi = findViewById(R.id.lockUi)
@@ -64,8 +63,8 @@ class LockScreenActivity : AppCompatActivity() {
 
             if (enteredPasscode == correctPinCode) {
                 edit.text.clear()
-                removePackageFromFirebase(intent.getStringExtra("PACKAGE_NAME") ?: "") // Remove package from Firebase
-                finishAffinity() // Finish all activities and return to the home screen
+                removePackageFromFirebase(intent.getStringExtra("PACKAGE_NAME") ?: "")
+                finishAffinity()
             } else {
                 Toast.makeText(this, "Passcode is incorrect", Toast.LENGTH_LONG).show()
             }
@@ -107,7 +106,7 @@ class LockScreenActivity : AppCompatActivity() {
         query.addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 for (appSnapshot in snapshot.children) {
-                    appSnapshot.ref.removeValue() // Remove the package from Firebase
+                    appSnapshot.ref.removeValue()
                     Log.d("Firebase", "Package removed: $packageName")
                 }
             }

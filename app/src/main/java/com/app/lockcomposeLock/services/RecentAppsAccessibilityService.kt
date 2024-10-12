@@ -3,11 +3,9 @@ package com.app.lockcomposeLock.services
 
 import android.accessibilityservice.AccessibilityService
 import android.annotation.SuppressLint
-import android.database.Cursor
 import android.graphics.PixelFormat
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
-import android.net.Uri
 import android.os.Build
 import android.util.Log
 import android.view.LayoutInflater
@@ -35,11 +33,11 @@ class RecentAppsAccessibilityService : AccessibilityService() {
 
     private var overlayView: View? = null
     private lateinit var windowManager: WindowManager
-    private val lockedApps = mutableSetOf<String>() // Holds the package names of locked apps
+    private val lockedApps = mutableSetOf<String>()
 
     // Firebase Database Reference
     private lateinit var database: DatabaseReference
-    private val appPinCodes = mutableMapOf<String, String>() // Map to hold packageName -> pinCode
+    private val appPinCodes = mutableMapOf<String, String>()
 
     companion object {
         private const val TAG = "RecentAppsService"
@@ -51,7 +49,7 @@ class RecentAppsAccessibilityService : AccessibilityService() {
         fetchLockedPackages()
     }
 
-    // Fetch locked apps and their pin codes from Firebase
+
     private fun fetchLockedPackages() {
         database.child("childApp").addValueEventListener(object : ValueEventListener {
             override fun onDataChange(dataSnapshot: DataSnapshot) {
@@ -62,8 +60,8 @@ class RecentAppsAccessibilityService : AccessibilityService() {
                     val pinCode = childSnapshot.child("pin_code").getValue(String::class.java) ?: ""
 
                     if (packageName.isNotEmpty() && pinCode.isNotEmpty()) {
-                        appPinCodes[packageName] = pinCode // Store package name and PIN code
-                        lockedApps.add(packageName) // Add to locked apps set
+                        appPinCodes[packageName] = pinCode
+                        lockedApps.add(packageName)
                     }
                 }
                 Log.d(TAG, "Updated locked apps: $lockedApps")
@@ -79,10 +77,9 @@ class RecentAppsAccessibilityService : AccessibilityService() {
         val packageName = event.packageName?.toString() ?: return
         val myPackageName = applicationContext.packageName
 
-        // Ignore the event if the current package is the service itself
+
         if (packageName == myPackageName) return
 
-        // Check if the app is in the locked apps list
         if (AppLockHelper.shouldLockApp(packageName)) {
             Toast.makeText(this, "Locked App Detected: $packageName", Toast.LENGTH_LONG).show()
             showPartialOverlay(packageName) // Show the lock UI
@@ -93,7 +90,7 @@ class RecentAppsAccessibilityService : AccessibilityService() {
         // Handle service interruptions if necessary
     }
 
-    // Show the overlay screen when a locked app is detected
+
     private fun showPartialOverlay(packageName: String) {
         if (overlayView == null) {
             val layoutInflater = LayoutInflater.from(this)
@@ -134,7 +131,6 @@ class RecentAppsAccessibilityService : AccessibilityService() {
         }
     }
 
-    // Display passcode UI for unlocking the app
     @SuppressLint("ClickableViewAccessibility")
     private fun showPassCodeUi(view: View, packageName: String) {
         val btn0 = view.findViewById<TextView>(R.id.btn0)
@@ -157,15 +153,15 @@ class RecentAppsAccessibilityService : AccessibilityService() {
         tick.setOnClickListener {
             val enteredPasscode = passcodeBuilder.toString()
 
-            // Fetch the correct PIN code for the specific app being unlocked
+
             val correctPinCode = appPinCodes[packageName]
 
             if (correctPinCode != null && enteredPasscode == correctPinCode) {
-                lockedApps.remove(packageName) // Remove the app from locked apps
+                lockedApps.remove(packageName)
                 edit.text.clear()
                 Toast.makeText(this, "Unlocked successfully", Toast.LENGTH_LONG).show()
 
-                // Remove the app from Firebase
+
                 removeAppFromFirebase(packageName)
 
                 removeOverlay()

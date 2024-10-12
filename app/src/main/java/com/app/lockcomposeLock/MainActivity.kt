@@ -72,7 +72,7 @@ class MainActivity : ComponentActivity() {
         val hasNotificationPermission = remember { mutableStateOf(isNotificationPermissionGranted(context)) }
         val isAccessibilityServiceEnabled = remember { mutableStateOf(isAccessibilityServiceEnabled(context, RecentAppsAccessibilityService::class.java)) }
 
-        // Function to update permission status
+
         fun updatePermissionStatus() {
             hasUsageStatsPermission.value = hasUsageStatsPermission(context)
             hasOverlayPermission.value = hasOverlayPermission(context)
@@ -80,7 +80,7 @@ class MainActivity : ComponentActivity() {
             isAccessibilityServiceEnabled.value = isAccessibilityServiceEnabled(context, RecentAppsAccessibilityService::class.java)
         }
 
-        // Launchers for requesting permissions
+
         val requestOverlayPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             updatePermissionStatus()
         }
@@ -94,13 +94,12 @@ class MainActivity : ComponentActivity() {
             updatePermissionStatus()
         }
 
-        // Function to check if all permissions are granted
+
         fun hasAllPermissions(): Boolean {
             return hasUsageStatsPermission.value && hasOverlayPermission.value && hasNotificationPermission.value && isAccessibilityServiceEnabled.value
         }
 
         Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            // Display permission rows
             PermissionRow(
                 label = "Overlay Permission",
                 isGranted = hasOverlayPermission.value,
@@ -141,7 +140,6 @@ class MainActivity : ComponentActivity() {
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Image at the bottom center of the screen
             Box(
                 modifier = Modifier
                     .padding(16.dp)
@@ -160,7 +158,7 @@ class MainActivity : ComponentActivity() {
                                 Toast.makeText(context, "Please grant all permissions.", Toast.LENGTH_SHORT).show()
                             }
                         }
-                        .size(48.dp) // Adjust size as needed
+                        .size(48.dp)
                 )
             }
         }
@@ -187,19 +185,19 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Helper function to check if usage stats permission is granted
+
     private fun hasUsageStatsPermission(context: Context): Boolean {
         val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
         val mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), context.packageName)
         return mode == AppOpsManager.MODE_ALLOWED
     }
 
-    // Helper function to check if overlay permission is granted
+
     private fun hasOverlayPermission(context: Context): Boolean {
         return Settings.canDrawOverlays(context)
     }
 
-    // Helper function to check if notification permission is granted
+
     private fun isNotificationPermissionGranted(context: Context): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
@@ -208,12 +206,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Helper function to check if the Accessibility Service is enabled
+
     private fun isAccessibilityServiceEnabled(context: Context, service: Class<out AccessibilityService>): Boolean {
         val enabledServices = Settings.Secure.getString(
             context.contentResolver,
             Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-        ) ?: return false // Handle null value by returning false
+        ) ?: return false
 
         val colonSplitter = TextUtils.SimpleStringSplitter(':').apply {
             setString(enabledServices)
