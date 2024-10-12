@@ -22,6 +22,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
+import com.app.lockcomposeLock.AppLockHelper
 import com.app.lockcomposeLock.R
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
@@ -52,7 +53,7 @@ class RecentAppsAccessibilityService : AccessibilityService() {
 
     // Fetch locked apps and their pin codes from Firebase
     private fun fetchLockedPackages() {
-        database.child("lockedApps").addValueEventListener(object : ValueEventListener {
+        database.child("childApp").addValueEventListener(object : ValueEventListener {
             override fun onDataChange(dataSnapshot: DataSnapshot) {
                 appPinCodes.clear() // Clear previous data
 
@@ -82,9 +83,9 @@ class RecentAppsAccessibilityService : AccessibilityService() {
         if (packageName == myPackageName) return
 
         // Check if the app is in the locked apps list
-        if (lockedApps.contains(packageName)) {
+        if (AppLockHelper.shouldLockApp(packageName)) {
             Toast.makeText(this, "Locked App Detected: $packageName", Toast.LENGTH_LONG).show()
-            showPartialOverlay(packageName)
+            showPartialOverlay(packageName) // Show the lock UI
         }
     }
 

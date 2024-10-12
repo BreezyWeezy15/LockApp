@@ -17,21 +17,32 @@ import android.os.IBinder
 import android.os.Looper
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import com.app.lockcomposeLock.AppLockHelper
 import com.app.lockcomposeLock.LockScreenActivity
 
 import com.app.lockcomposeLock.MainActivity
 import com.app.lockcomposeLock.R
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 
 
 class AppLockService : Service() {
-
     companion object {
         private const val NOTIFICATION_CHANNEL_ID = "AppLockServiceChannel"
         private const val NOTIFICATION_ID = 1
+        private const val PACKAGE_NAME_KEY = "package_name"
+        private const val PIN_CODE_KEY = "pin_code"
     }
 
     private lateinit var sharedPreferences: SharedPreferences
     private val handler = Handler(Looper.getMainLooper())
+    private val lockedApps = mutableSetOf<String>()
+    private val appPinCodes = mutableMapOf<String, String>() // Map for packageName -> pinCode
+    private lateinit var database: DatabaseReference
+
     private val runnable = object : Runnable {
         override fun run() {
             checkForegroundApp()
@@ -45,7 +56,40 @@ class AppLockService : Service() {
         createNotificationChannel()
         val notification = createNotification()
         startForeground(NOTIFICATION_ID, notification)
+
+        database = FirebaseDatabase.getInstance().reference
+        fetchLockedPackages()
+
         handler.post(runnable)
+    }
+
+    // Fetch locked apps and their pin codes from Firebase
+    private fun fetchLockedPackages() {
+        database.child("childApp").addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(dataSnapshot: DataSnapshot) {
+                updateLockedApps(dataSnapshot)
+            }
+
+            override fun onCancelled(databaseError: DatabaseError) {
+                Log.e("FirebaseError", "Error fetching data: ${databaseError.message}")
+            }
+        })
+    }
+
+    private fun updateLockedApps(dataSnapshot: DataSnapshot) {
+        appPinCodes.clear() // Clear previous data
+        lockedApps.clear() // Clear previous locked apps
+
+        for (childSnapshot in dataSnapshot.children) {
+            val packageName = childSnapshot.child(PACKAGE_NAME_KEY).getValue(String::class.java) ?: ""
+            val pinCode = childSnapshot.child(PIN_CODE_KEY).getValue(String::class.java) ?: ""
+
+            if (packageName.isNotEmpty() && pinCode.isNotEmpty()) {
+                appPinCodes[packageName] = pinCode // Store package name and PIN code
+                lockedApps.add(packageName) // Add to locked apps set
+            }
+        }
+        Log.d("AppLockService", "Updated locked apps: $lockedApps")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -71,46 +115,31 @@ class AppLockService : Service() {
             val currentApp = sortedStats.firstOrNull()?.packageName
             Log.d("AppLockService", "Current top app: $currentApp")
 
-            // Get the list of locked packages from the content provider
-            val lockedPackages = fetchLockedPackagesFromContentProvider()
-
-            if (currentApp in lockedPackages) {
-                showLockScreen(currentApp!!)
+            if (currentApp != null && shouldLockApp(currentApp)) {
+                showLockScreen(currentApp)
             }
         } else {
             Log.d("AppLockService", "No usage stats available.")
         }
     }
 
+    private fun shouldLockApp(packageName: String): Boolean {
+        return lockedApps.contains(packageName)
+    }
+
+    // Show the lock screen for the locked app
     private fun showLockScreen(packageName: String) {
-        val lockIntent = Intent(this, LockScreenActivity::class.java)
-        lockIntent.putExtra("PACKAGE_NAME", packageName)
-
-        // Get the list of locked packages from the content provider
-        val lockedPackages = fetchLockedPackagesFromContentProvider()
-        lockIntent.putStringArrayListExtra("LOCKED_PACKAGES", ArrayList(lockedPackages))
-
-        lockIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        val lockIntent = Intent(this, LockScreenActivity::class.java).apply {
+            putExtra("PACKAGE_NAME", packageName)
+            putExtra("PIN_CODE", appPinCodes[packageName]) // Pass the correct PIN code
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        }
         startActivity(lockIntent)
     }
 
-    private fun fetchLockedPackagesFromContentProvider(): List<String> {
-        val contentResolver: ContentResolver = contentResolver
-        val uri = Uri.parse("content://com.app.lockcomposeAdmin.provider/apps")
-        val lockedPackages = mutableListOf<String>()
-
-        contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-            while (cursor.moveToNext()) {
-                val packageName = cursor.getString(cursor.getColumnIndexOrThrow("package_name"))
-                lockedPackages.add(packageName)
-            }
-        }
-
-        return lockedPackages
-    }
-
+    // Helper function to create the foreground service notification
     private fun createNotificationChannel() {
-        if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val serviceChannel = NotificationChannel(
                 NOTIFICATION_CHANNEL_ID,
                 "App Lock Service Channel",
@@ -127,10 +156,9 @@ class AppLockService : Service() {
 
         return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
             .setContentTitle("App Lock Service")
-            .setContentText("App lock service is running")
+            .setContentText("Running...")
             .setSmallIcon(R.drawable.baseline_lock_24)
             .setContentIntent(pendingIntent)
-            .setOngoing(true)
             .build()
     }
 }

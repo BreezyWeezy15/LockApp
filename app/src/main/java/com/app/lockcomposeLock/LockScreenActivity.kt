@@ -1,19 +1,16 @@
 package com.app.lockcomposeLock
 
 
+
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.os.Bundle
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
-import android.widget.Button
-import android.widget.EditText
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.google.firebase.database.DataSnapshot
@@ -21,15 +18,18 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 
-
 class LockScreenActivity : AppCompatActivity() {
 
     private lateinit var lockUi: LinearLayout
     private lateinit var askPermissionBtn: Button
+    private var correctPinCode: String? = null // Store the correct PIN code
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_lock_screen)
+
+        // Retrieve the correct PIN code from the intent
+        correctPinCode = intent.getStringExtra("PIN_CODE")
 
         lockUi = findViewById(R.id.lockUi)
         askPermissionBtn = findViewById(R.id.askPermission)
@@ -61,18 +61,13 @@ class LockScreenActivity : AppCompatActivity() {
 
         tick.setOnClickListener {
             val enteredPasscode = passcodeBuilder.toString()
-            val packageName = intent.getStringExtra("PACKAGE_NAME")
 
-            if (packageName != null) {
-                val correctPinCode = getPinCodeForApp(packageName)
-
-                if (enteredPasscode == correctPinCode) {
-                    edit.text.clear()
-                    removePackageFromFirebase(packageName) // Remove package from Firebase
-                    finishAffinity()
-                } else {
-                    Toast.makeText(this, "Passcode is incorrect", Toast.LENGTH_LONG).show()
-                }
+            if (enteredPasscode == correctPinCode) {
+                edit.text.clear()
+                removePackageFromFirebase(intent.getStringExtra("PACKAGE_NAME") ?: "") // Remove package from Firebase
+                finishAffinity() // Finish all activities and return to the home screen
+            } else {
+                Toast.makeText(this, "Passcode is incorrect", Toast.LENGTH_LONG).show()
             }
         }
 
@@ -103,28 +98,6 @@ class LockScreenActivity : AppCompatActivity() {
         val greenColor = ContextCompat.getColor(this, R.color.greenColor)
         val colorFilter = PorterDuffColorFilter(greenColor, PorterDuff.Mode.SRC_IN)
         edit.compoundDrawablesRelative[2]?.colorFilter = colorFilter
-    }
-
-    private fun getPinCodeForApp(packageName: String): String? {
-        val database = FirebaseDatabase.getInstance().reference.child("childApp")
-        var pinCode: String? = null
-
-        database.orderByChild("package_name").equalTo(packageName)
-            .addListenerForSingleValueEvent(object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    if (snapshot.exists()) {
-                        for (appSnapshot in snapshot.children) {
-                            pinCode = appSnapshot.child("pin_code").getValue(String::class.java)
-                        }
-                    }
-                }
-
-                override fun onCancelled(error: DatabaseError) {
-                    Log.e("FirebaseError", "Error fetching data: ${error.message}")
-                }
-            })
-
-        return pinCode
     }
 
     private fun removePackageFromFirebase(packageName: String) {
