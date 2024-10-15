@@ -11,7 +11,7 @@ import com.google.firebase.database.ValueEventListener
 object AppLockHelper {
 
     private lateinit var database: DatabaseReference
-    private val lockedApps = mutableMapOf<String, String>() // Map of packageName -> pinCode
+    private val lockedApps = mutableMapOf<String, String>()
 
     fun initialize() {
         database = FirebaseDatabase.getInstance().reference

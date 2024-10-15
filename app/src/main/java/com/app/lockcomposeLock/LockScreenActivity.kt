@@ -100,20 +100,28 @@ class LockScreenActivity : AppCompatActivity() {
     }
 
     private fun removePackageFromFirebase(packageName: String) {
-        val database = FirebaseDatabase.getInstance().reference.child("childApp")
-        val query = database.orderByChild("package_name").equalTo(packageName)
+        val firebaseDatabase = FirebaseDatabase.getInstance().reference
 
-        query.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                for (appSnapshot in snapshot.children) {
-                    appSnapshot.ref.removeValue()
-                    Log.d("Firebase", "Package removed: $packageName")
+        fun removeFromNode(nodeName: String) {
+            val nodeReference = firebaseDatabase.child(nodeName)
+            val query = nodeReference.orderByChild("package_name").equalTo(packageName)
+
+            query.addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    for (appSnapshot in snapshot.children) {
+                        appSnapshot.ref.removeValue()
+                        Log.d("Firebase", "Package removed: $packageName from $nodeName")
+                    }
                 }
-            }
 
-            override fun onCancelled(error: DatabaseError) {
-                Log.e("FirebaseError", "Error removing package: ${error.message}")
-            }
-        })
+                override fun onCancelled(error: DatabaseError) {
+                    Log.e("FirebaseError", "Error removing package from $nodeName: ${error.message}")
+                }
+            })
+        }
+
+        removeFromNode("childApp")
+        removeFromNode("Apps")
     }
+
 }

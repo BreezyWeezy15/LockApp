@@ -35,7 +35,6 @@ class RecentAppsAccessibilityService : AccessibilityService() {
     private lateinit var windowManager: WindowManager
     private val lockedApps = mutableSetOf<String>()
 
-    // Firebase Database Reference
     private lateinit var database: DatabaseReference
     private val appPinCodes = mutableMapOf<String, String>()
 
@@ -82,7 +81,7 @@ class RecentAppsAccessibilityService : AccessibilityService() {
 
         if (AppLockHelper.shouldLockApp(packageName)) {
             Toast.makeText(this, "Locked App Detected: $packageName", Toast.LENGTH_LONG).show()
-            showPartialOverlay(packageName) // Show the lock UI
+            showPartialOverlay(packageName)
         }
     }
 
@@ -160,10 +159,7 @@ class RecentAppsAccessibilityService : AccessibilityService() {
                 lockedApps.remove(packageName)
                 edit.text.clear()
                 Toast.makeText(this, "Unlocked successfully", Toast.LENGTH_LONG).show()
-
-
-                removeAppFromFirebase(packageName)
-
+                removePackageFromFirebase(packageName)
                 removeOverlay()
             } else {
                 Toast.makeText(this, "Passcode is incorrect", Toast.LENGTH_LONG).show()
@@ -210,15 +206,33 @@ class RecentAppsAccessibilityService : AccessibilityService() {
         }
     }
 
-    private fun removeAppFromFirebase(packageName: String) {
-        database.child("lockedApps").child(packageName).removeValue()
-            .addOnSuccessListener {
-                Log.d(TAG, "Successfully removed $packageName from Firebase")
-            }
-            .addOnFailureListener { e ->
-                Log.e(TAG, "Failed to remove $packageName from Firebase: ${e.message}")
-            }
+    private fun removePackageFromFirebase(packageName: String) {
+        val firebaseDatabase = FirebaseDatabase.getInstance().reference
+
+
+        fun removeFromNode(nodeName: String) {
+            val nodeReference = firebaseDatabase.child(nodeName)
+            val query = nodeReference.orderByChild("package_name").equalTo(packageName)
+
+            query.addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    for (appSnapshot in snapshot.children) {
+                        appSnapshot.ref.removeValue()
+                        Log.d("Firebase", "Package removed: $packageName from $nodeName")
+                    }
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    Log.e("FirebaseError", "Error removing package from $nodeName: ${error.message}")
+                }
+            })
+        }
+
+        // Remove from both childApp and Apps nodes
+        removeFromNode("childApp")
+        removeFromNode("Apps")
     }
+
 }
 
 
