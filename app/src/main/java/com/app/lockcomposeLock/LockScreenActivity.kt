@@ -120,7 +120,7 @@ class LockScreenActivity : AppCompatActivity() {
             })
         }
 
-        removeFromNode("childApp")
+        removeFromNode("childApps")
         removeFromNode("Apps")
     }
 

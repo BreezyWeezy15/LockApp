@@ -62,7 +62,7 @@ class AppLockService : Service() {
 
 
     private fun fetchLockedPackages() {
-        database.child("childApp").addValueEventListener(object : ValueEventListener {
+        database.child("childApps").addValueEventListener(object : ValueEventListener {
             override fun onDataChange(dataSnapshot: DataSnapshot) {
                 updateLockedApps(dataSnapshot)
             }

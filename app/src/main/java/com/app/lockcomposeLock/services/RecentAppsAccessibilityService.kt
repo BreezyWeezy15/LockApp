@@ -50,7 +50,7 @@ class RecentAppsAccessibilityService : AccessibilityService() {
 
 
     private fun fetchLockedPackages() {
-        database.child("childApp").addValueEventListener(object : ValueEventListener {
+        database.child("childApps").addValueEventListener(object : ValueEventListener {
             override fun onDataChange(dataSnapshot: DataSnapshot) {
                 appPinCodes.clear() // Clear previous data
 
@@ -229,7 +229,7 @@ class RecentAppsAccessibilityService : AccessibilityService() {
         }
 
         // Remove from both childApp and Apps nodes
-        removeFromNode("childApp")
+        removeFromNode("childApps")
         removeFromNode("Apps")
     }
 

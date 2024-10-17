@@ -183,7 +183,7 @@ data class InstalledApps(
 
 private fun fetchAppsFromFirebase(onAppsFetched: (List<InstalledApps>) -> Unit) {
     val database = FirebaseDatabase.getInstance().reference
-    val appsListRef = database.child("childApp")
+    val appsListRef = database.child("childApps")
 
     appsListRef.addValueEventListener(object : ValueEventListener {
         override fun onDataChange(dataSnapshot: DataSnapshot) {
